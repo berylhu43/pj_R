@@ -1,0 +1,103 @@
+---
+title: '1'
+output: html_document
+date: "2024-01-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r read document}
+setwd("/Users/yuxuanhu/Desktop/coursera_R/5.2.1")
+library(ggplot2)
+activity<-read.csv("activity.csv")
+```
+
+## Including Plots
+
+Here's the histogram of the total number of steps taken each day:
+
+```{r pressure, echo=FALSE}
+total_steps <- aggregate(steps ~ date, data = activity, sum, na.rm = TRUE)
+ggplot(total_steps, aes(x = steps)) +
+  geom_histogram(binwidth = 1000, fill = 'blue', color = 'black') +
+  labs(title = "Total Number of Steps by Day", x = "Total Steps", y = "Frequency") +
+  theme_minimal()
+```
+
+```{r mean & median, echo=FALSE}
+mean_steps <- round(mean(total_steps$steps), digits = 3)
+median_steps <- median(total_steps$steps)
+```
+
+The mean of total steps is `r mean_steps`
+The median of total steps is `r median_steps`
+
+```{r Max steps based on five min interval, echo=TRUE}
+steps_on_interval <- aggregate(steps ~ interval, data = activity, mean, na.rm= TRUE)
+plot(steps_on_interval$interval, steps_on_interval$steps, type = "l", xlab = "5 min interval", ylab = "average steps", main = "Max steps based on five min interval")
+max_interval <- steps_on_interval[which.max(steps_on_interval$steps),1]
+max_steps <- max(steps_on_interval$steps)
+print(max_interval)
+```
+
+The 5-minute interval `r max_interval`, on average across all the days in the dataset, contains the maximum number of steps `r max_steps`
+
+```{r Missing Values, echo=FALSE}
+count_NA <- sum(is.na(activity$steps))
+print(count_NA)
+replace_activity <- activity
+missing_date <- c("2012-10-01", "2012-10-08", "2012-11-01", "2012-11-04", "2012-11-09", "2012-11-14", "2012-11-30")
+index <- 1
+
+for (md in missing_date) {
+    # Find rows in activity that match the missing date
+    rows_to_replace <- which(replace_activity$date == md)
+
+    for (r in rows_to_replace) {
+        if (index > nrow(steps_on_interval)) {
+            break  # Break out of both loops if no more replacement data
+        }
+
+        replace_activity$steps[r] <- steps_on_interval$steps[index]
+        index <- index + 1
+    }
+
+    if (index > nrow(steps_on_interval)) {
+        break # Break out of outer loop if no more replacement data
+    }
+}
+```
+```{r histogram with the replaced table}
+replace_total_step <- aggregate(steps ~ date, data=replace_activity,sum)
+hist(replace_total_step$steps, breaks = 10)
+mean_replace <- mean(replace_total_step$steps)
+median_replace <- median(replace_total_step$steps)
+```
+The mean of total steps without NA value is `r mean_replace`
+The median of total steps is `r median_replace`
+The replaced table has the same mean value with the original table and a slightly bigger median value comparing to the original value.
+
+
+```{r weekdays, echo=TRUE}
+replace_activity$date <- as.Date(replace_activity$date, format = "%Y-%m-%d") 
+
+replace_activity$day_type <- ifelse(weekdays(replace_activity$date) %in% c('Saturday', 'Sunday'), 'Weekend', 'Weekday')
+
+average_steps_by_weekday <- aggregate(steps ~ interval+day_type, data = replace_activity, mean)
+ggplot(average_steps_by_weekday,aes(x = interval, y = steps))+
+    geom_line()+
+    facet_grid(day_type~.)+
+    labs(title = "Average Number of Steps by Interval",
+       x = "Interval",
+       y = "Average Number of Steps") +
+    theme_minimal()
+```
+
+
+
+
+
